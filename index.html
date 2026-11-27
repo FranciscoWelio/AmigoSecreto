@@ -3,89 +3,270 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
 <title>Amigo Secreto</title>
+<!-- Troque o valor de BUILD a cada vez que subir uma nova versão: é isso que força o navegador a abrir a página nova. -->
+<script>
+const BUILD="2026-11-27-1";
+(async()=>{try{
+  const r=await fetch(location.pathname+"?_="+Date.now(),{cache:"no-store"});
+  const m=(await r.text()).match(/const BUILD="([^"]+)"/);
+  const v=new URLSearchParams(location.search).get("v");
+  if(m&&m[1]!==BUILD&&v!==m[1])location.replace(location.pathname+"?v="+m[1]);
+}catch(e){}})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--pine:#12372a;--paper:#fff8ea;--ink:#1d2b24;--red:#c8102e;--gold:#f2b134;--muted:#5f6f66}
-*{box-sizing:border-box}
+*{box-sizing:border-box}[hidden]{display:none!important}
 body{margin:0;min-height:100vh;background:var(--pine);color:var(--ink);font:400 17px/1.5 Fredoka,system-ui,sans-serif;display:flex;justify-content:center;padding:24px 16px}
-main{width:100%;max-width:460px}
-h1{color:var(--paper);font-weight:700;font-size:2.4rem;margin:8px 0 4px;text-align:center}
-.sub{color:#cfe3d8;text-align:center;margin:0 0 20px}
-.tag{background:var(--paper);border-radius:18px;padding:22px;position:relative}
+main{width:100%;max-width:480px}
+h1{color:var(--paper);font-weight:700;font-size:2.2rem;margin:8px 0 18px;text-align:center}
+h2{font-size:1.05rem;margin:0 0 6px}
+.tag{background:var(--paper);border-radius:18px;padding:22px;position:relative;margin-bottom:22px}
 .tag::before{content:"";position:absolute;top:-9px;left:50%;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:var(--pine);border:3px solid var(--gold)}
 label{display:block;font-weight:600;margin:14px 0 6px}
-label:first-child{margin-top:0}
-select,input{width:100%;font:inherit;padding:11px 12px;border:2px solid #d9cfb8;border-radius:10px;background:#fff;color:var(--ink)}
-input{text-transform:uppercase}
-select:focus,input:focus,button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
-button{font:inherit;font-weight:700;width:100%;margin-top:16px;padding:13px;border:0;border-radius:12px;background:var(--red);color:#fff;cursor:pointer}
-button:disabled{opacity:.5;cursor:not-allowed}
+select,input[type=text],input[type=password],input:not([type]),textarea{width:100%;font:inherit;padding:11px 12px;border:2px solid #d9cfb8;border-radius:10px;background:#fff;color:var(--ink)}
+textarea{min-height:90px}
+select:focus,input:focus,textarea:focus,button:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button{font:inherit;font-weight:700;width:100%;margin-top:14px;padding:13px;border:0;border-radius:12px;background:var(--red);color:#fff;cursor:pointer}
+button.alt{background:var(--pine)}button:disabled{opacity:.5;cursor:not-allowed}
+button.mini{width:auto;margin:0;padding:4px 10px;font-size:.85rem}
+.txt{white-space:pre-wrap;margin:0 0 12px}.muted{color:var(--muted);font-size:.92rem;margin:6px 0 0}
+.chk{display:flex;gap:10px;align-items:flex-start;font-weight:400;margin-top:14px}.chk input{margin-top:6px;width:auto}
+.err{color:var(--red);font-weight:600}.ok{color:var(--pine);font-weight:600}
+p.m{min-height:1.4em;margin:10px 0 0;text-align:center}
+#pinShow{font-size:2.6rem;font-weight:700;letter-spacing:.12em;text-align:center;color:var(--red);border:3px dashed var(--gold);border-radius:14px;padding:12px;margin:12px 0}
 #reel{display:none;margin-top:18px;text-align:center;border:3px dashed var(--gold);border-radius:14px;padding:18px 10px;font-size:2rem;font-weight:700;color:var(--red);min-height:84px}
 #reel small{display:block;font-size:.9rem;font-weight:400;color:var(--muted)}
-#msg{min-height:1.4em;margin:12px 0 0;text-align:center;font-weight:600;color:var(--red)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #e6dcc4}
+summary{cursor:pointer;font-weight:600}input.pin{text-transform:uppercase}
 </style>
 </head>
 <body>
 <main>
-  <h1>🎁 Amigo Secreto</h1>
-  <p class="sub">Escolha seu nome, digite o PIN que o organizador enviou para você e descubra quem você tirou.</p>
-  <section class="tag">
-    <label for="me">Quem é você?</label>
-    <select id="me" disabled><option>Carregando…</option></select>
-    <label for="pin">Seu PIN</label>
-    <input id="pin" autocomplete="off" placeholder="ABC-123" maxlength="8">
-    <button id="go" disabled>Ver meu amigo secreto</button>
-    <div id="reel" aria-live="polite"></div>
-    <p id="msg"></p>
+  <h1 id="titulo">🎁 Amigo Secreto</h1>
+
+  <section class="tag" id="vVazio"><p class="txt" id="vazioTxt">Carregando…</p></section>
+
+  <section class="tag" id="info" hidden>
+    <h2>Como funciona</h2><p class="txt" id="exp"></p>
+    <h2>Regras</h2><p class="txt" id="reg" style="margin:0"></p>
   </section>
+
+  <section class="tag" id="vInscr" hidden>
+    <div id="cadastro">
+      <h2>Inscrições abertas</h2>
+      <label for="nome">Seu nome</label>
+      <input id="nome" maxlength="40" autocomplete="off" placeholder="Nome e sobrenome ou apelido">
+      <label class="chk"><input type="checkbox" id="aceito"> Li as regras e concordo.</label>
+      <button id="btnIns">Participar</button>
+      <p class="m" id="insMsg"></p>
+    </div>
+    <div id="pinBox" hidden>
+      <h2>Você está dentro! Este é o seu PIN:</h2>
+      <div id="pinShow"></div>
+      <p class="txt"><b>Anote agora.</b> Ele aparece uma única vez e é a única forma de ver quem você tirou. Quando o organizador liberar o sorteio, volte a esta página.</p>
+    </div>
+    <p class="muted"><b id="cont"></b>: <span id="lista"></span></p>
+  </section>
+
+  <section class="tag" id="vLib" hidden>
+    <h2>O sorteio foi liberado!</h2>
+    <label for="me">Quem é você?</label>
+    <select id="me"></select>
+    <label for="pin">Seu PIN</label>
+    <input id="pin" class="pin" autocomplete="off" placeholder="ABC-123" maxlength="8">
+    <button id="go">Ver meu amigo secreto</button>
+    <div id="reel" aria-live="polite"></div>
+    <p class="m err" id="msg"></p>
+  </section>
+
+  <details class="tag" id="adm">
+    <summary>Organizador</summary>
+    <div id="aLogin">
+      <label for="aSenha">Senha do organizador</label>
+      <input id="aSenha" type="password" autocomplete="off">
+      <button id="aEntrar" class="alt">Entrar</button>
+    </div>
+    <div id="aPainel" hidden>
+      <label for="aTit">Título</label><input id="aTit" maxlength="50">
+      <label for="aExp">Texto explicativo</label><textarea id="aExp"></textarea>
+      <label for="aReg">Regras</label><textarea id="aReg"></textarea>
+      <button id="aSalvar" class="alt">Salvar textos</button>
+      <label>Inscritos</label><div id="aLista"></div>
+      <div id="aSorteio">
+        <label for="aBan">Quem não pode tirar quem (opcional)</label>
+        <textarea id="aBan" style="min-height:60px" placeholder="Ana, Bruno&#10;Carla, Diego, Elisa"></textarea>
+        <p class="muted">Uma linha por grupo, com os nomes iguais aos da lista. Quem está na mesma linha não tira um ao outro.</p>
+        <button id="aLiberar">Liberar sorteio</button>
+      </div>
+      <button id="aReset" class="alt">Reiniciar tudo (apaga inscritos e sorteio)</button>
+    </div>
+    <p class="m" id="aMsg"></p>
+  </details>
 </main>
-<script src="dados.js"></script>
-<script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue, runTransaction, set, update, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+// Cole aqui a configuração do seu projeto Firebase (Realtime Database)
+const firebaseConfig = {
+  apiKey: "COLE_AQUI",
+  authDomain: "SEU-PROJETO.firebaseapp.com",
+  databaseURL: "https://SEU-PROJETO-default-rtdb.firebaseio.com",
+  projectId: "SEU-PROJETO"
+};
+
+const DEF_EXP = "Cada pessoa se inscreve com o seu nome e recebe um PIN secreto. Quando o organizador liberar o sorteio, você escolhe o seu nome, digita o PIN e descobre quem tirou. Ninguém, nem o organizador, consegue ver quem os outros tiraram.";
+const DEF_REG = "1. Anote o seu PIN: ele aparece uma única vez.\n2. Não conte a ninguém quem você tirou.\n3. Combine o valor do presente no grupo da família.\n4. Depois que o sorteio for liberado, não dá mais para se inscrever.";
+
+const db = getDatabase(initializeApp(firebaseConfig)), EV = ref(db, "evento");
 const $ = id => document.getElementById(id);
-const enc = new TextEncoder(), dec = new TextDecoder();
-const ub64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
-let itens = [];
+const E = new TextEncoder(), D = new TextDecoder();
+const b64 = b => btoa(String.fromCharCode(...new Uint8Array(b))), ub = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const rb = n => crypto.getRandomValues(new Uint8Array(n));
+const rnd = n => crypto.getRandomValues(new Uint32Array(1))[0] % n;
+const hex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
+const norm = n => n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const say = (id, t, ok) => { $(id).textContent = t; $(id).className = "m " + (ok ? "ok" : "err"); };
+const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const ECDH = { name: "ECDH", namedCurve: "P-256" };
+const ALPHA = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+const newPin = () => { const c = Array.from(rb(6), v => ALPHA[v % 32]).join(""); return c.slice(0, 3) + "-" + c.slice(3); };
+const cleanPin = p => p.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
-if (window.DADOS && window.DADOS.itens) {
-  itens = window.DADOS.itens;
-  const nomes = itens.map(i => i.n).sort((a, b) => a.localeCompare(b, "pt-BR"));
-  $("me").innerHTML = '<option value="">Selecione…</option>' +
-    nomes.map(n => `<option>${n.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</option>`).join("");
-  $("me").disabled = false; $("go").disabled = false;
-} else {
-  $("me").innerHTML = "<option>Erro ao carregar</option>";
-  $("msg").textContent = "Não achei o dados.js. Ele precisa estar na mesma pasta do index.html.";
+const sha = async t => hex(await crypto.subtle.digest("SHA-256", E.encode(t)));
+const adminHash = async c => hex(await crypto.subtle.deriveBits({ name: "PBKDF2", salt: E.encode("amigo-secreto-admin"), iterations: 200000, hash: "SHA-256" },
+  await crypto.subtle.importKey("raw", E.encode(c), "PBKDF2", false, ["deriveBits"]), 256));
+const pinKey = async (pin, salt, use) => crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 200000, hash: "SHA-256" },
+  await crypto.subtle.importKey("raw", E.encode(pin), "PBKDF2", false, ["deriveKey"]), { name: "AES-GCM", length: 256 }, false, [use]);
+const aesKey = (bits, use) => crypto.subtle.importKey("raw", bits, "AES-GCM", false, [use]);
+
+let ev = null, carregado = false, admin = false, filled = false;
+onValue(EV, s => { ev = s.val(); carregado = true; render(); },
+  e => { $("vazioTxt").textContent = "Erro ao conectar. Confira a configuração do Firebase."; console.error(e); });
+
+function render() {
+  const f = ev?.fase, ps = Object.entries(ev?.participantes || {}).sort((a, b) => a[1].nome.localeCompare(b[1].nome, "pt-BR"));
+  $("titulo").textContent = "🎁 " + (ev?.titulo || "Amigo Secreto");
+  $("vVazio").hidden = !!ev; $("info").hidden = !ev;
+  $("vazioTxt").textContent = carregado ? "O organizador ainda não criou o sorteio." : "Carregando…";
+  $("vInscr").hidden = f !== "inscricoes"; $("vLib").hidden = f !== "liberado";
+  $("exp").textContent = ev?.explicacao || ""; $("reg").textContent = ev?.regras || "";
+  $("cont").textContent = ps.length + (ps.length === 1 ? " inscrito" : " inscritos");
+  $("lista").textContent = ps.length ? ps.map(([, p]) => p.nome).join(", ") : "ninguém ainda";
+  const sel = $("me"), prev = sel.value;
+  sel.innerHTML = '<option value="">Selecione…</option>' + ps.map(([k, p]) => `<option value="${k}">${esc(p.nome)}</option>`).join("");
+  sel.value = prev;
+  $("aLogin").hidden = admin; $("aPainel").hidden = !admin;
+  $("aEntrar").textContent = ev ? "Entrar" : "Criar sorteio com esta senha";
+  if (!admin || !ev) return;
+  if (!filled) { $("aTit").value = ev.titulo || ""; $("aExp").value = ev.explicacao || ""; $("aReg").value = ev.regras || ""; filled = true; }
+  $("aLista").innerHTML = ps.map(([k, p]) => `<div class="row"><span>${esc(p.nome)}</span>${f === "inscricoes" ? `<button class="mini" data-k="${k}">Remover</button>` : ""}</div>`).join("") || '<p class="muted">Ninguém ainda.</p>';
+  $("aSorteio").hidden = f !== "inscricoes";
 }
 
-async function abrir(item, pin) {
-  const base = await crypto.subtle.importKey("raw", enc.encode(pin), "PBKDF2", false, ["deriveKey"]);
-  const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: ub64(item.s), iterations: 200000, hash: "SHA-256" },
-    base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
-  return dec.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: ub64(item.iv) }, key, ub64(item.c)));
-}
+// ---------- Inscrição ----------
+$("btnIns").onclick = async () => {
+  const nome = $("nome").value.trim().replace(/\s+/g, " ");
+  if (!nome) return say("insMsg", "Escreva seu nome.");
+  if (!$("aceito").checked) return say("insMsg", "Marque que leu as regras.");
+  if (ev?.fase !== "inscricoes") return say("insMsg", "As inscrições foram encerradas.");
+  $("btnIns").disabled = true; say("insMsg", "Gerando seu PIN…", true);
+  try {
+    const pin = newPin(), kp = await crypto.subtle.generateKey(ECDH, true, ["deriveBits"]);
+    const pub = JSON.stringify(await crypto.subtle.exportKey("jwk", kp.publicKey));
+    const priv = E.encode(JSON.stringify(await crypto.subtle.exportKey("jwk", kp.privateKey)));
+    const s = rb(16), iv = rb(12);
+    const c = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await pinKey(cleanPin(pin), s, "encrypt"), priv);
+    const k = "n" + (await sha(norm(nome))).slice(0, 20);
+    const rec = { nome, pub, s: b64(s), iv: b64(iv), c: b64(c) };
+    const r = await runTransaction(ref(db, "evento/participantes/" + k), cur => cur ? undefined : rec);
+    if (!r.committed) return say("insMsg", "Esse nome já está inscrito. Use sobrenome ou apelido para diferenciar.");
+    $("pinShow").textContent = pin; $("cadastro").hidden = true; $("pinBox").hidden = false;
+  } catch (e) { say("insMsg", "Erro ao inscrever. Tente de novo."); console.error(e); }
+  finally { $("btnIns").disabled = false; }
+};
 
+// ---------- Ver o sorteado ----------
 function reveal(nome) {
-  const reel = $("reel"); reel.style.display = "block";
+  const reel = $("reel"), nomes = Object.values(ev.participantes).map(p => p.nome); reel.style.display = "block";
   const fim = () => { reel.textContent = nome; const s = document.createElement("small"); s.textContent = "é o seu amigo secreto. Guarde segredo! 🤫"; reel.appendChild(s); };
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return fim();
-  let t = 0;
-  const timer = setInterval(() => {
-    reel.textContent = itens[Math.floor(Math.random() * itens.length)].n;
-    if (++t > 22) { clearInterval(timer); fim(); }
-  }, 110);
+  let t = 0; const timer = setInterval(() => { reel.textContent = nomes[rnd(nomes.length)]; if (++t > 22) { clearInterval(timer); fim(); } }, 110);
 }
-
 $("go").onclick = async () => {
-  const nome = $("me").value, pin = $("pin").value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-  $("msg").textContent = ""; $("reel").style.display = "none";
-  if (!nome) return $("msg").textContent = "Escolha seu nome.";
+  const k = $("me").value, pin = cleanPin($("pin").value); $("msg").textContent = ""; $("reel").style.display = "none";
+  if (!k) return $("msg").textContent = "Escolha seu nome.";
   if (pin.length !== 6) return $("msg").textContent = "O PIN tem 6 letras ou números.";
   $("go").disabled = true;
-  try { reveal(await abrir(itens.find(i => i.n === nome), pin)); }
-  catch { $("msg").textContent = "PIN incorreto para esse nome."; }
-  $("go").disabled = false;
+  try {
+    const p = ev.participantes[k], s = ev.sorteio?.[k];
+    if (!s) throw new Error("sem sorteio");
+    let priv;
+    try { priv = JSON.parse(D.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: ub(p.iv) }, await pinKey(pin, ub(p.s), "decrypt"), ub(p.c)))); }
+    catch { $("msg").textContent = "PIN incorreto para esse nome."; return; }
+    const mine = await crypto.subtle.importKey("jwk", priv, ECDH, false, ["deriveBits"]);
+    const eph = await crypto.subtle.importKey("jwk", JSON.parse(s.e), ECDH, false, []);
+    const bits = await crypto.subtle.deriveBits({ name: "ECDH", public: eph }, mine, 256);
+    reveal(D.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: ub(s.iv) }, await aesKey(bits, "decrypt"), ub(s.c))));
+  } catch (e) { $("msg").textContent = "Não foi possível abrir o sorteio. Atualize a página e tente de novo."; console.error(e); }
+  finally { $("go").disabled = false; }
+};
+
+// ---------- Organizador ----------
+$("aEntrar").onclick = async () => {
+  const c = $("aSenha").value;
+  if (c.length < 4) return say("aMsg", "A senha precisa ter pelo menos 4 caracteres.");
+  try {
+    const h = await adminHash(c);
+    if (!ev) await set(EV, { adminHash: h, titulo: "Amigo Secreto", explicacao: DEF_EXP, regras: DEF_REG, fase: "inscricoes" });
+    else if (ev.adminHash !== h) return say("aMsg", "Senha incorreta.");
+    admin = true; filled = false; say("aMsg", ""); render();
+  } catch (e) { say("aMsg", "Erro: " + e.message); }
+};
+$("aSalvar").onclick = async () => {
+  await update(EV, { titulo: $("aTit").value.trim() || "Amigo Secreto", explicacao: $("aExp").value, regras: $("aReg").value });
+  say("aMsg", "Textos salvos.", true);
+};
+$("aLista").onclick = e => { const k = e.target.dataset.k; if (k && confirm("Remover este inscrito?")) remove(ref(db, "evento/participantes/" + k)); };
+$("aReset").onclick = async () => {
+  if (!confirm("Apagar todos os inscritos e o sorteio?")) return;
+  await set(EV, { adminHash: ev.adminHash, titulo: ev.titulo, explicacao: ev.explicacao, regras: ev.regras, fase: "inscricoes" });
+  say("aMsg", "Tudo reiniciado.", true);
+};
+$("aLiberar").onclick = async () => {
+  const ps = Object.entries(ev.participantes || {});
+  if (ps.length < 3) return say("aMsg", "São necessários pelo menos 3 inscritos.");
+  if (!confirm(`Liberar o sorteio com ${ps.length} pessoas? Depois disso ninguém mais pode se inscrever.`)) return;
+  const nn = ps.map(([, p]) => norm(p.nome)), banned = new Set();
+  $("aBan").value.split("\n").forEach(l => { const g = l.split(",").map(norm).filter(Boolean); g.forEach(a => g.forEach(b => banned.add(a + "|" + b))); });
+  let perm = null;
+  for (let t = 0; t < 50000 && !perm; t++) {
+    const p = shuffle([...ps.keys()]);
+    if (p.every((j, i) => j !== i && !banned.has(nn[i] + "|" + nn[j]))) perm = p;
+  }
+  if (!perm) return say("aMsg", "Não existe sorteio possível com essas restrições. Remova algumas.");
+  $("aLiberar").disabled = true; say("aMsg", "Sorteando…", true);
+  try {
+    const sorteio = {};
+    for (let i = 0; i < ps.length; i++) {
+      const eph = await crypto.subtle.generateKey(ECDH, true, ["deriveBits"]);
+      const gpub = await crypto.subtle.importKey("jwk", JSON.parse(ps[i][1].pub), ECDH, false, []);
+      const bits = await crypto.subtle.deriveBits({ name: "ECDH", public: gpub }, eph.privateKey, 256);
+      const iv = rb(12);
+      const c = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await aesKey(bits, "encrypt"), E.encode(ps[perm[i]][1].nome));
+      sorteio[ps[i][0]] = { e: JSON.stringify(await crypto.subtle.exportKey("jwk", eph.publicKey)), iv: b64(iv), c: b64(c) };
+    }
+    await update(EV, { sorteio, fase: "liberado" });
+    say("aMsg", "Sorteio liberado! Você não vê os resultados.", true);
+  } catch (e) { say("aMsg", "Erro ao sortear: " + e.message); }
+  finally { $("aLiberar").disabled = false; }
 };
 </script>
 </body>
