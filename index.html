@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amigo Secreto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--pine:#12372a;--paper:#fff8ea;--ink:#1d2b24;--red:#c8102e;--gold:#f2b134;--muted:#5f6f66}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--pine);color:var(--ink);font:400 17px/1.5 Fredoka,system-ui,sans-serif;display:flex;justify-content:center;padding:24px 16px}
+main{width:100%;max-width:460px}
+h1{color:var(--paper);font-weight:700;font-size:2.4rem;margin:8px 0 4px;text-align:center}
+.sub{color:#cfe3d8;text-align:center;margin:0 0 20px}
+.tag{background:var(--paper);border-radius:18px;padding:22px;position:relative}
+.tag::before{content:"";position:absolute;top:-9px;left:50%;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:var(--pine);border:3px solid var(--gold)}
+label{display:block;font-weight:600;margin:14px 0 6px}
+label:first-child{margin-top:0}
+select,input{width:100%;font:inherit;padding:11px 12px;border:2px solid #d9cfb8;border-radius:10px;background:#fff;color:var(--ink)}
+input{text-transform:uppercase}
+select:focus,input:focus,button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button{font:inherit;font-weight:700;width:100%;margin-top:16px;padding:13px;border:0;border-radius:12px;background:var(--red);color:#fff;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+#reel{display:none;margin-top:18px;text-align:center;border:3px dashed var(--gold);border-radius:14px;padding:18px 10px;font-size:2rem;font-weight:700;color:var(--red);min-height:84px}
+#reel small{display:block;font-size:.9rem;font-weight:400;color:var(--muted)}
+#msg{min-height:1.4em;margin:12px 0 0;text-align:center;font-weight:600;color:var(--red)}
+</style>
+</head>
+<body>
+<main>
+  <h1>🎁 Amigo Secreto</h1>
+  <p class="sub">Escolha seu nome, digite o PIN que o organizador enviou para você e descubra quem você tirou.</p>
+  <section class="tag">
+    <label for="me">Quem é você?</label>
+    <select id="me" disabled><option>Carregando…</option></select>
+    <label for="pin">Seu PIN</label>
+    <input id="pin" autocomplete="off" placeholder="ABC-123" maxlength="8">
+    <button id="go" disabled>Ver meu amigo secreto</button>
+    <div id="reel" aria-live="polite"></div>
+    <p id="msg"></p>
+  </section>
+</main>
+<script src="dados.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const enc = new TextEncoder(), dec = new TextDecoder();
+const ub64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+let itens = [];
+
+if (window.DADOS && window.DADOS.itens) {
+  itens = window.DADOS.itens;
+  const nomes = itens.map(i => i.n).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  $("me").innerHTML = '<option value="">Selecione…</option>' +
+    nomes.map(n => `<option>${n.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</option>`).join("");
+  $("me").disabled = false; $("go").disabled = false;
+} else {
+  $("me").innerHTML = "<option>Erro ao carregar</option>";
+  $("msg").textContent = "Não achei o dados.js. Ele precisa estar na mesma pasta do index.html.";
+}
+
+async function abrir(item, pin) {
+  const base = await crypto.subtle.importKey("raw", enc.encode(pin), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: ub64(item.s), iterations: 200000, hash: "SHA-256" },
+    base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+  return dec.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: ub64(item.iv) }, key, ub64(item.c)));
+}
+
+function reveal(nome) {
+  const reel = $("reel"); reel.style.display = "block";
+  const fim = () => { reel.textContent = nome; const s = document.createElement("small"); s.textContent = "é o seu amigo secreto. Guarde segredo! 🤫"; reel.appendChild(s); };
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return fim();
+  let t = 0;
+  const timer = setInterval(() => {
+    reel.textContent = itens[Math.floor(Math.random() * itens.length)].n;
+    if (++t > 22) { clearInterval(timer); fim(); }
+  }, 110);
+}
+
+$("go").onclick = async () => {
+  const nome = $("me").value, pin = $("pin").value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  $("msg").textContent = ""; $("reel").style.display = "none";
+  if (!nome) return $("msg").textContent = "Escolha seu nome.";
+  if (pin.length !== 6) return $("msg").textContent = "O PIN tem 6 letras ou números.";
+  $("go").disabled = true;
+  try { reveal(await abrir(itens.find(i => i.n === nome), pin)); }
+  catch { $("msg").textContent = "PIN incorreto para esse nome."; }
+  $("go").disabled = false;
+};
+</script>
+</body>
+</html>
